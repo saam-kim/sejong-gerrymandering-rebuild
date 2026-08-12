@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  background: #f3f4f6;
+  color: #111827;
+}
+
+/* 태블릿 터치 사용을 전제로 모든 인터랙티브 요소는 최소 32px 높이를 확보한다. */
+button, [role="button"], input, select {
+  min-height: 32px;
+}
