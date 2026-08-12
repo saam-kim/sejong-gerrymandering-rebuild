@@ -71,6 +71,7 @@ export default function StudentJoin() {
               value={teamName}
               onChange={(event) => setTeamName(event.target.value)}
               placeholder="예: 1모둠"
+              maxLength={30}
               className="h-[52px] w-full rounded-xl border-2 border-white/15 bg-white/[0.08] px-4 text-base font-extrabold text-white outline-none transition placeholder:text-white/25 focus:border-indigo-400"
             />
           </label>
