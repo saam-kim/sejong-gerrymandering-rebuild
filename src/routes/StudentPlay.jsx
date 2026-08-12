@@ -33,7 +33,7 @@ function introSeenKey(pin, teamId) {
 export default function StudentPlay() {
   const { pin } = useParams();
   const session = useTeamSession(pin);
-  const { meta, submissions, timer, loading, exists } = useRoom(pin);
+  const { meta, drafts, submissions, timer, loading, exists } = useRoom(pin);
   // 학생이 처음 입장했을 때만 순서대로 보여주는 온보딩: "왜 하는지" → "규칙" → 시작
   const [onboardingStep, setOnboardingStep] = useState(() =>
     session.teamId && !window.localStorage.getItem(introSeenKey(pin, session.teamId)) ? "why" : null,
@@ -43,15 +43,19 @@ export default function StudentPlay() {
   const roundMeta = getRoundMeta(currentRound);
 
   const mySubmission = submissions?.[currentRound]?.[session.teamId];
+  const myDraft = drafts?.[currentRound]?.[session.teamId];
   const isLocked = Boolean(mySubmission);
 
-  const [assignments, setAssignments] = useState(() => mySubmission?.assignments || getEmptyAssignments());
+  const [assignments, setAssignments] = useState(
+    () => mySubmission?.assignments || myDraft?.assignments || getEmptyAssignments(),
+  );
   const [activeDistrictId, setActiveDistrictId] = useState(DISTRICTS[0]);
   const [transform, setTransform] = useState(null);
   const [validationResult, setValidationResult] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
   const toastTimerRef = useRef(null);
+  const hasHydratedRoundRef = useRef(false);
 
   function showToast(text) {
     setToast(text);
@@ -60,13 +64,21 @@ export default function StudentPlay() {
   }
 
   // 라운드가 바뀌면(교사가 다음 라운드로 넘기면) 배정을 새 라운드 기준으로 다시 초기화한다.
+  // Firebase 데이터는 비동기로 도착하므로 loading도 의존성에 넣어 로딩이 막 끝난 시점에도
+  // 한 번 더 복원한다 — 그래야 새로고침/재접속 시 저장돼 있던 배정(제출본 또는 자동저장
+  // 초안)이 빈 지도로 보이는 일이 없다. hasHydratedRoundRef는 이 최초 복원 시점엔 안내
+  // 토스트를 띄우지 않기 위한 가드(진짜 라운드 전환 때만 띄움).
   useEffect(() => {
-    setAssignments(mySubmission?.assignments || getEmptyAssignments());
+    if (loading) return;
+    setAssignments(mySubmission?.assignments || myDraft?.assignments || getEmptyAssignments());
     setActiveDistrictId(DISTRICTS[0]);
     setValidationResult(null);
-    showToast(`${roundMeta.name}이 시작되었습니다.`);
+    if (hasHydratedRoundRef.current) {
+      showToast(`${roundMeta.name}이 시작되었습니다.`);
+    }
+    hasHydratedRoundRef.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentRound]);
+  }, [currentRound, loading]);
 
   useAutosave({ pin, round: currentRound, teamId: session.teamId, assignments, isLocked });
 

@@ -15,6 +15,14 @@ function readSession(pin) {
   }
 }
 
+// 참가 폼(StudentJoin)에서 "이미 이 PIN으로 들어온 적 있는 기기인지"를 제출 시점에 바로
+// 확인하기 위한 헬퍼. useTeamSession의 내부 state는 훅이 처음 마운트될 때의 pin 값으로
+// 딱 한 번만 초기화되므로(입력 중인 pin이 바뀌어도 재평가되지 않음), 그 state에 의존하지
+// 않고 localStorage를 직접 읽는다.
+export function readTeamSession(pin) {
+  return readSession(pin);
+}
+
 function writeSession(pin, session) {
   window.localStorage.setItem(storageKey(pin), JSON.stringify(session));
 }

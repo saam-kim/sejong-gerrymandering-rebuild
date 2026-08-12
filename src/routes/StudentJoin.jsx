@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { get, ref } from "firebase/database";
 import { getDb } from "../lib/firebase";
 import { roomPath } from "../lib/roomPaths";
-import { useTeamSession } from "../hooks/useTeamSession";
+import { readTeamSession, useTeamSession } from "../hooks/useTeamSession";
 import PinDigitRow from "../components/PinDigitRow";
 
 export default function StudentJoin() {
@@ -38,6 +38,15 @@ export default function StudentJoin() {
         setJoining(false);
         return;
       }
+
+      // 이 기기로 같은 PIN에 이미 참가한 적이 있다면(새로고침, 브라우저 재시작 등으로
+      // 다시 참가 화면에 온 경우) 새 모둠을 또 만들지 않고 하던 모둠으로 바로 이어간다.
+      const existing = readTeamSession(cleanPin);
+      if (existing?.teamId) {
+        navigate(`/play/${cleanPin}`);
+        return;
+      }
+
       await session.join(cleanName);
       navigate(`/play/${cleanPin}`);
     } catch (err) {
