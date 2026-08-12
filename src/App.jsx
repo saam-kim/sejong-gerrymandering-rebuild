@@ -5,6 +5,7 @@ import TeacherDashboard from "./routes/TeacherDashboard";
 import TeacherCompareFullscreen from "./routes/TeacherCompareFullscreen";
 import StudentJoin from "./routes/StudentJoin";
 import StudentPlay from "./routes/StudentPlay";
+import StudentPreview from "./routes/StudentPreview";
 
 export default function App() {
   return (
@@ -14,6 +15,7 @@ export default function App() {
         <Route path="/teacher/new" element={<TeacherCreate />} />
         <Route path="/teacher/:pin" element={<TeacherDashboard />} />
         <Route path="/teacher/:pin/compare" element={<TeacherCompareFullscreen />} />
+        <Route path="/teacher/:pin/preview" element={<StudentPreview />} />
         <Route path="/join" element={<StudentJoin />} />
         <Route path="/play/:pin" element={<StudentPlay />} />
         <Route path="*" element={<Navigate to="/" replace />} />

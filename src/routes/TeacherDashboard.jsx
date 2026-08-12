@@ -125,6 +125,14 @@ export default function TeacherDashboard() {
           >
             모둠 목록
           </button>
+          <a
+            href={`#/teacher/${pin}/preview`}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-black hover:bg-white/20"
+          >
+            👀 학생 화면 미리보기
+          </a>
           <button
             type="button"
             disabled={selectedTeamIds.length === 0}
