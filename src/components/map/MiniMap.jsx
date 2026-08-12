@@ -23,7 +23,7 @@ export default function MiniMap({ assignments, districtColors, transform }) {
   };
 
   return (
-    <div className="pointer-events-none w-28 overflow-hidden rounded-lg border border-gray-200 bg-white/90 shadow-sm sm:w-36">
+    <div className="pointer-events-none h-28 w-28 overflow-hidden rounded-lg border border-gray-200 bg-white/90 shadow-sm sm:h-36 sm:w-36">
       <svg viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`} className="h-full w-full">
         {boundaries.features.map((feature) => (
           <path

@@ -15,7 +15,6 @@ import {
 } from "../lib/districtRules";
 import { AREA_BY_ID } from "../data/sejongAreas";
 import MapCanvas from "../components/map/MapCanvas";
-import MiniMap from "../components/map/MiniMap";
 import DistrictPicker from "../components/panels/DistrictPicker";
 import DetailDrawer from "../components/panels/DetailDrawer";
 import DistrictSidePanel from "../components/panels/DistrictSidePanel";
@@ -50,7 +49,6 @@ export default function StudentPlay() {
     () => mySubmission?.assignments || myDraft?.assignments || getEmptyAssignments(),
   );
   const [activeDistrictId, setActiveDistrictId] = useState(DISTRICTS[0]);
-  const [transform, setTransform] = useState(null);
   const [validationResult, setValidationResult] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
@@ -154,9 +152,6 @@ export default function StudentPlay() {
         <div className="flex shrink-0 items-center gap-3">
           <CountdownDisplay timer={timer} size="sm" />
           <SeatPreview seats={seats} />
-          <div className="hidden h-16 w-24 sm:block">
-            <MiniMap assignments={assignments} districtColors={DISTRICT_THEME} transform={transform} />
-          </div>
           {isLocked ? (
             <span className="rounded-xl bg-emerald-100 px-4 py-2.5 text-sm font-black text-emerald-700">
               제출 완료 · 대기 중
@@ -174,7 +169,7 @@ export default function StudentPlay() {
       </header>
 
       {!isLocked && (
-        <div className="flex items-center gap-2 border-b border-gray-200 bg-gray-50 px-3 py-1.5">
+        <div className="flex items-center gap-2 border-b border-gray-200 bg-gray-50 px-3 py-1.5 lg:hidden">
           <div className="min-w-0 flex-1">
             <DistrictPicker
               districts={DISTRICTS}
@@ -196,12 +191,6 @@ export default function StudentPlay() {
 
       <div className="flex min-h-0 flex-1">
         <div className="relative flex min-w-0 flex-1 flex-col">
-          <div className="relative flex-1 sm:hidden">
-            <div className="absolute right-3 top-3 z-10 h-20 w-20">
-              <MiniMap assignments={assignments} districtColors={DISTRICT_THEME} transform={transform} />
-            </div>
-          </div>
-
           <main className="relative min-h-0 flex-1 px-3 pb-2 pt-2">
             <MapCanvas
               key={currentRound}
@@ -209,7 +198,6 @@ export default function StudentPlay() {
               districtColors={DISTRICT_THEME}
               onAreaTap={handleAreaTap}
               readOnly={isLocked}
-              onViewportChange={setTransform}
             />
 
             {toast && (
@@ -220,7 +208,14 @@ export default function StudentPlay() {
           </main>
         </div>
 
-        <DistrictSidePanel districtColors={DISTRICT_THEME} results={results} unassignedCount={totalUnassigned} />
+        <DistrictSidePanel
+          districtColors={DISTRICT_THEME}
+          results={results}
+          unassignedCount={totalUnassigned}
+          activeDistrictId={isLocked ? null : activeDistrictId}
+          onSelectDistrict={isLocked ? undefined : setActiveDistrictId}
+          onResetAll={isLocked ? undefined : handleResetAll}
+        />
       </div>
 
       <DetailDrawer districtColors={DISTRICT_THEME} results={results} unassignedCount={totalUnassigned} />

@@ -5,6 +5,7 @@ import { boundaries, pathGenerator, VIEWBOX_HEIGHT, VIEWBOX_WIDTH } from "./proj
 import { AREA_BY_ID } from "../../data/sejongAreas";
 import downtownOutline from "../../data/downtownOutline.json";
 import AreaTooltip from "./AreaTooltip";
+import MiniMap from "./MiniMap";
 
 const ZOOM_EXTENT = [1, 8];
 // 행정중심복합도시(행복도시) — 서로 붙어 있어 축소 상태에서는 이름이 겹치는 밀집 동 12곳.
@@ -22,7 +23,6 @@ export default function MapCanvas({
   districtColors,
   onAreaTap,
   readOnly = false,
-  onViewportChange,
 }) {
   const svgRef = useRef(null);
   const gRef = useRef(null);
@@ -41,7 +41,6 @@ export default function MapCanvas({
       .clickDistance(6) // 살짝 흔들리는 터치 탭도 클릭으로 인정
       .on("zoom", (event) => {
         setTransform(event.transform);
-        onViewportChange?.(event.transform);
       });
 
     zoomBehaviorRef.current = zoomBehavior;
@@ -197,6 +196,10 @@ export default function MapCanvas({
           </button>
         </div>
       )}
+
+      <div className="absolute right-3 top-16 z-10">
+        <MiniMap assignments={assignments} districtColors={districtColors} transform={transform} />
+      </div>
 
       <svg
         ref={svgRef}
