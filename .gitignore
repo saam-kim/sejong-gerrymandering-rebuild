@@ -13,6 +13,9 @@ dist-ssr
 *.local
 .env
 
+# 홍보자료(가이드북/인스타툰/영상) — 로컬 전용, 레포에는 안 올림
+/promo
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
