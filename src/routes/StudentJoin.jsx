@@ -9,7 +9,6 @@ import PinDigitRow from "../components/PinDigitRow";
 export default function StudentJoin() {
   const navigate = useNavigate();
   const [pin, setPin] = useState("");
-  const [teamName, setTeamName] = useState("");
   const [error, setError] = useState("");
   const [joining, setJoining] = useState(false);
   const session = useTeamSession(pin.trim());
@@ -19,13 +18,8 @@ export default function StudentJoin() {
     setError("");
 
     const cleanPin = pin.trim();
-    const cleanName = teamName.trim();
     if (!cleanPin) {
       setError("선생님이 알려준 PIN을 입력해 주세요.");
-      return;
-    }
-    if (!cleanName) {
-      setError("모둠 이름을 입력해 주세요.");
       return;
     }
 
@@ -47,7 +41,7 @@ export default function StudentJoin() {
         return;
       }
 
-      await session.join(cleanName);
+      await session.join();
       navigate(`/play/${cleanPin}`);
     } catch (err) {
       setError(err.message || "참가하지 못했습니다. 다시 시도해 주세요.");
@@ -72,19 +66,6 @@ export default function StudentJoin() {
             <PinDigitRow value={pin} length={6} onChange={setPin} name="join-pin" autoFocus />
           </label>
 
-          <div className="my-6 h-px bg-white/[0.08]" />
-
-          <label className="block">
-            <span className="mb-2 block text-xs font-black uppercase tracking-[0.08em] text-white/50">모둠 이름</span>
-            <input
-              value={teamName}
-              onChange={(event) => setTeamName(event.target.value)}
-              placeholder="예: 1모둠"
-              maxLength={30}
-              className="h-[52px] w-full rounded-xl border-2 border-white/15 bg-white/[0.08] px-4 text-base font-extrabold text-white outline-none transition placeholder:text-white/25 focus:border-indigo-400"
-            />
-          </label>
-
           {error && <p className="mt-4 text-sm font-black text-red-400">{error}</p>}
 
           <button
@@ -97,7 +78,7 @@ export default function StudentJoin() {
         </div>
 
         <p className="mt-5 text-center text-xs font-bold leading-6 text-white/30">
-          같은 모둠은 모두 같은 이름으로 입력해야 같은 모둠으로 묶입니다.
+          모둠 이름은 입장 순서대로 자동으로 배정돼요(1모둠, 2모둠, ...).
         </p>
       </form>
     </main>

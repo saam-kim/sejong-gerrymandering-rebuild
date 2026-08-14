@@ -33,17 +33,14 @@ function writeSession(pin, session) {
 export function useTeamSession(pin) {
   const [session, setSession] = useState(() => (pin ? readSession(pin) : null));
 
-  const join = useCallback(
-    async (teamName) => {
-      const teamId = makeTeamId(teamName);
-      await joinTeam(pin, teamId, teamName);
-      const next = { teamId, teamName };
-      writeSession(pin, next);
-      setSession(next);
-      return next;
-    },
-    [pin],
-  );
+  const join = useCallback(async () => {
+    const teamId = makeTeamId();
+    const teamName = await joinTeam(pin, teamId);
+    const next = { teamId, teamName };
+    writeSession(pin, next);
+    setSession(next);
+    return next;
+  }, [pin]);
 
   const leave = useCallback(() => {
     window.localStorage.removeItem(storageKey(pin));

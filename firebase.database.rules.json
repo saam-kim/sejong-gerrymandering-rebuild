@@ -10,6 +10,7 @@
           "createdAt": { ".validate": "newData.isNumber()" },
           "currentRound": { ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 3" },
           "status": { ".validate": "newData.isString() && newData.val().length <= 20" },
+          "teamCounter": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 9999" },
           "timer": {
             "durationSeconds": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 3600" },
             "remainingMs": { ".validate": "newData.val() == null || (newData.isNumber() && newData.val() >= 0 && newData.val() <= 7200000)" },

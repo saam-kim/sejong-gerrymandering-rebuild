@@ -1,0 +1,16 @@
+{
+  "app": {
+    "name": "지도를 훔친 자들",
+    "url": "https://saam-kim.github.io/sejong-gerrymandering-rebuild/",
+    "stack": "Vite"
+  },
+  "tracks": [
+    "security",
+    "edzip"
+  ],
+  "edzipCase": "C",
+  "teacher": {
+    "dormsHandle": ""
+  },
+  "ownershipConfirmed": true
+}
