@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function Landing() {
   const navigate = useNavigate();
@@ -57,6 +57,10 @@ export default function Landing() {
               </span>
             </button>
           </div>
+
+          <Link to="/privacy" className="mt-10 inline-block text-xs font-bold text-white/30 hover:text-white/60">
+            개인정보처리방침
+          </Link>
         </div>
       </section>
     </main>

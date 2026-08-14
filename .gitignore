@@ -16,6 +16,9 @@ dist-ssr
 # 홍보자료(가이드북/인스타툰/영상) — 로컬 전용, 레포에는 안 올림
 /promo
 
+# dorms-check 스캔 결과물 — 실행할 때마다 재생성됨(config는 추적, 리포트는 제외)
+/.dorms-check
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

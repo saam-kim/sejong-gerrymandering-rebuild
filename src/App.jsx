@@ -6,12 +6,14 @@ import TeacherCompareFullscreen from "./routes/TeacherCompareFullscreen";
 import StudentJoin from "./routes/StudentJoin";
 import StudentPlay from "./routes/StudentPlay";
 import StudentPreview from "./routes/StudentPreview";
+import PrivacyPolicy from "./routes/PrivacyPolicy";
 
 export default function App() {
   return (
     <HashRouter>
       <Routes>
         <Route path="/" element={<Landing />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/teacher/new" element={<TeacherCreate />} />
         <Route path="/teacher/:pin" element={<TeacherDashboard />} />
         <Route path="/teacher/:pin/compare" element={<TeacherCompareFullscreen />} />

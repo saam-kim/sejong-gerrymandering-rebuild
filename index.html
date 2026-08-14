@@ -5,6 +5,15 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>지도를 훔친 자들 — 세종시 게리맨더링</title>
+    <!--
+      GitHub Pages는 정적 호스팅이라 실제 HTTP 응답 헤더를 설정할 수 없다(_headers 파일
+      미지원, 서버 설정 불가). meta 태그로 낼 수 있는 것만 여기서 설정한다. X-Frame-Options,
+      X-Content-Type-Options, Permissions-Policy, CSP의 frame-ancestors 지시문은 스펙상
+      meta 태그로는 적용되지 않는 브라우저 정책이라 이 방식으로는 낼 수 없다 — 필요하면
+      Cloudflare 같은 CDN을 앞단에 두거나 헤더 설정이 가능한 호스팅으로 옮겨야 한다.
+    -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://*.firebasedatabase.app wss://*.firebasedatabase.app https://*.firebaseio.com wss://*.firebaseio.com; base-uri 'self'; form-action 'self'; object-src 'none';" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
   </head>
   <body>
     <div id="root"></div>
