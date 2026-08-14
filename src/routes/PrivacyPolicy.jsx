@@ -82,8 +82,8 @@ export default function PrivacyPolicy() {
             요구할 수 있습니다. 요청은 아래 연락처로 하실 수 있으며, 법령에 따라 지체 없이
             (10일 이내) 조치합니다.
           </p>
-          <p className="mt-2 font-bold text-amber-700">
-            [연락처 미기재 — 운영자 확인 후 채워질 예정입니다]
+          <p className="mt-2">
+            연락처: 김현석(세종 한솔고등학교 교사) — <a href="mailto:nk316s@naver.com" className="text-indigo-600 underline">nk316s@naver.com</a>
           </p>
         </Section>
 
@@ -113,9 +113,13 @@ export default function PrivacyPolicy() {
         </Section>
 
         <Section title="제10조 (개인정보 보호책임자)">
-          <p className="font-bold text-amber-700">
-            [보호책임자 이름·직책·연락처 미기재 — 운영자 확인 후 채워질 예정입니다]
-          </p>
+          <ul className="list-disc space-y-1 pl-5">
+            <li>성명: 김현석</li>
+            <li>직책: 세종 한솔고등학교 교사</li>
+            <li>
+              연락처: <a href="mailto:nk316s@naver.com" className="text-indigo-600 underline">nk316s@naver.com</a>
+            </li>
+          </ul>
           <p className="mt-2">
             정보주체는 개인정보 침해에 대해 개인정보분쟁조정위원회(1833-6972),
             개인정보침해신고센터(118) 등에도 상담·신고할 수 있습니다.
