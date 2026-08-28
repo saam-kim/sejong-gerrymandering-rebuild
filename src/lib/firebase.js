@@ -1,8 +1,8 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getDatabase } from "firebase/database";
 
-// 교사가 GitHub Pages 등 무서버 배포 환경에서도 쓸 수 있도록,
-// 브라우저에 직접 붙여넣은 설정(로컬스토리지)을 .env 기본값보다 우선한다.
+// 배포 환경 변수는 서비스가 지정한 전용 Firebase 연결이므로 로컬스토리지보다 우선한다.
+// 환경 변수가 없는 로컬 개발에서는 교사가 브라우저에 붙여넣은 설정을 대체값으로 쓴다.
 const FIREBASE_CONFIG_STORAGE_KEY = "gerrymanderingFirebaseConfig";
 
 function readStoredConfig() {
@@ -20,12 +20,8 @@ export function saveFirebaseConfig(config) {
   window.localStorage.setItem(FIREBASE_CONFIG_STORAGE_KEY, JSON.stringify(config));
 }
 
-export function getFirebaseConfig() {
-  const stored = readStoredConfig();
-  if (stored?.apiKey && stored?.databaseURL && stored?.projectId) return stored;
-
-  const env = import.meta.env || {};
-  return {
+export function resolveFirebaseConfig(env = {}, stored = null) {
+  const envConfig = {
     apiKey: env.VITE_FIREBASE_API_KEY,
     authDomain: env.VITE_FIREBASE_AUTH_DOMAIN,
     databaseURL: env.VITE_FIREBASE_DATABASE_URL,
@@ -34,6 +30,15 @@ export function getFirebaseConfig() {
     messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID,
     appId: env.VITE_FIREBASE_APP_ID,
   };
+  if (envConfig.apiKey && envConfig.databaseURL && envConfig.projectId) return envConfig;
+
+  if (stored?.apiKey && stored?.databaseURL && stored?.projectId) return stored;
+
+  return envConfig;
+}
+
+export function getFirebaseConfig() {
+  return resolveFirebaseConfig(import.meta.env || {}, readStoredConfig());
 }
 
 export function isFirebaseConfigured() {

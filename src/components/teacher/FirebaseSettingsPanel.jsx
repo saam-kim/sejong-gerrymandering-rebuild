@@ -58,7 +58,7 @@ export default function FirebaseSettingsPanel() {
       {isOpen && (
         <div className="mt-3 flex flex-col gap-2">
           <p className="text-xs font-bold text-white/40">
-            Firebase 콘솔의 Realtime Database 설정 객체를 그대로 붙여넣으세요. 브라우저에만 저장되며 서버로 전송되지 않습니다.
+            Firebase 콘솔의 Realtime Database 설정 객체를 그대로 붙여넣으세요. 브라우저에만 저장되며 서버로 전송되지 않습니다. 배포 환경 변수가 설정된 사이트에서는 배포 설정이 항상 우선합니다.
           </p>
           <textarea
             value={text}

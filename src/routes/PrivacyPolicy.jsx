@@ -37,7 +37,7 @@ export default function PrivacyPolicy() {
           <p className="mt-2">
             주민등록번호, 실명, 이메일, 생년월일, 연락처 등은 수집하지 않습니다. 접속 시
             네트워크 계층에서 자연히 발생하는 정보(예: IP 주소)는 인프라 제공자(Firebase,
-            GitHub Pages)가 자체 운영 목적으로만 처리할 뿐, 서비스가 별도로 수집·저장하지
+            Vercel)가 자체 운영 목적으로만 처리할 뿐, 서비스가 별도로 수집·저장하지
             않습니다.
           </p>
         </Section>
@@ -74,7 +74,7 @@ export default function PrivacyPolicy() {
               자체 보안·컴플라이언스 체계에 따라 관리됩니다.
             </li>
             <li>
-              <b>GitHub, Inc. (GitHub Pages)</b> — 위탁 업무: 웹사이트 정적 파일 호스팅.
+              <b>Vercel Inc.</b> — 위탁 업무: 웹사이트 정적 파일 호스팅.
             </li>
           </ul>
         </Section>
@@ -101,7 +101,7 @@ export default function PrivacyPolicy() {
         <Section title="제9조 (개인정보의 안전성 확보 조치)">
           <p>서비스는 다음과 같은 안전조치를 취하고 있습니다.</p>
           <ul className="mt-2 list-disc space-y-1 pl-5">
-            <li>전송 구간 암호화: 모든 통신은 HTTPS로 암호화됩니다(GitHub Pages, Firebase 모두 HTTPS 강제).</li>
+            <li>전송 구간 암호화: 모든 통신은 HTTPS로 암호화됩니다(Vercel, Firebase 모두 HTTPS 사용).</li>
             <li>
               데이터 형식 검증: Firebase 보안 규칙에서 저장 가능한 데이터의 형식·범위를
               엄격히 제한해, 정의되지 않은 필드나 범위를 벗어난 값의 저장을 서버 단에서

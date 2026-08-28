@@ -1,4 +1,4 @@
-import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Landing from "./routes/Landing";
 import TeacherCreate from "./routes/TeacherCreate";
 import TeacherDashboard from "./routes/TeacherDashboard";
@@ -10,7 +10,7 @@ import PrivacyPolicy from "./routes/PrivacyPolicy";
 
 export default function App() {
   return (
-    <HashRouter>
+    <BrowserRouter>
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
@@ -22,6 +22,6 @@ export default function App() {
         <Route path="/play/:pin" element={<StudentPlay />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </HashRouter>
+    </BrowserRouter>
   );
 }

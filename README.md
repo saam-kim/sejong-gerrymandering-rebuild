@@ -43,22 +43,23 @@ npm run build
 ## Firebase 설정
 
 실시간 동기화(교사 대시보드 ↔ 학생 화면)를 쓰려면 Firebase Realtime Database 프로젝트가
-필요합니다. 두 가지 방법 중 하나를 쓰세요.
+필요합니다. 배포 환경에서는 첫 번째 방법을 사용합니다.
 
 1. **배포 환경 변수** — `.env.example`을 참고해 `VITE_FIREBASE_*` 값을 설정
-2. **브라우저에서 직접 설정** — 교사 화면의 "Firebase 연결 설정" 패널에 Firebase 콘솔의
-   설정 객체를 붙여넣으면 브라우저 로컬스토리지에 저장됩니다(서버 전송 없음). GitHub Pages
-   같은 무서버 배포에서 유용합니다.
+2. **브라우저에서 직접 설정** — 로컬 개발 시 교사 화면의 "Firebase 연결 설정" 패널에
+   Firebase 콘솔의 설정 객체를 붙여넣으면 브라우저 로컬스토리지에 저장됩니다(서버 전송 없음).
+
+배포 환경 변수가 완전하게 설정되어 있으면 해당 값이 브라우저 로컬스토리지의 예전 설정보다
+항상 우선합니다.
 
 Realtime Database 규칙은 `firebase.database.rules.json` 참고(교실 한정 사용을 전제로
 PIN 단위 read/write를 열어 둔 단순한 규칙입니다).
 
-## 공유용 GitHub Pages
+## Vercel 배포
 
-이 저장소를 GitHub에 올리고 저장소 Settings → Pages에서 소스를 "GitHub Actions"로 설정하면
-`main` 브랜치에 push될 때 `.github/workflows/deploy.yml`이 자동으로 빌드·배포합니다. Firebase
-설정은 저장소 Settings → Secrets에 `VITE_FIREBASE_*` 값을 등록해 두세요.
+이 저장소를 Vercel 프로젝트에 연결하고 Framework Preset을 Vite로 선택합니다. 빌드 명령은
+`npm run build`, 출력 디렉터리는 `dist`입니다. `.env.example`에 나열된 `VITE_FIREBASE_*`
+환경 변수를 Vercel의 Production, Preview, Development 환경에 등록하세요.
 
-저장소를 `username.github.io/repo-이름` 형태(프로젝트 페이지)로 배포한다면
-`vite.config.js`에 `base: "/repo-이름/"`을 추가해야 정적 자원 경로가 올바르게 잡힙니다.
-라우팅은 해시 기반(`HashRouter`)이라 서버 설정 없이도 새로고침 시 깨지지 않습니다.
+`vercel.json`은 모든 SPA 경로를 `index.html`로 연결해 직접 URL 접근과 새로고침을 지원하고,
+`/privacy`는 정적 개인정보처리방침으로 제공합니다.

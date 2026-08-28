@@ -24,7 +24,7 @@ function duplicatePrivacyPage() {
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/sejong-gerrymandering-rebuild/',
+  base: '/',
   plugins: [react(), tailwindcss(), duplicatePrivacyPage()],
   server: {
     host: '0.0.0.0',
