@@ -5,6 +5,13 @@ import { getDatabase } from "firebase/database";
 // 환경 변수가 없는 로컬 개발에서는 교사가 브라우저에 붙여넣은 설정을 대체값으로 쓴다.
 const FIREBASE_CONFIG_STORAGE_KEY = "gerrymanderingFirebaseConfig";
 
+function normalizeFirebaseConfig(config) {
+  if (!config || typeof config !== "object") return {};
+  return Object.fromEntries(
+    Object.entries(config).map(([key, value]) => [key, typeof value === "string" ? value.trim() : value]),
+  );
+}
+
 function readStoredConfig() {
   if (typeof window === "undefined") return null;
   try {
@@ -17,11 +24,11 @@ function readStoredConfig() {
 }
 
 export function saveFirebaseConfig(config) {
-  window.localStorage.setItem(FIREBASE_CONFIG_STORAGE_KEY, JSON.stringify(config));
+  window.localStorage.setItem(FIREBASE_CONFIG_STORAGE_KEY, JSON.stringify(normalizeFirebaseConfig(config)));
 }
 
 export function resolveFirebaseConfig(env = {}, stored = null) {
-  const envConfig = {
+  const envConfig = normalizeFirebaseConfig({
     apiKey: env.VITE_FIREBASE_API_KEY,
     authDomain: env.VITE_FIREBASE_AUTH_DOMAIN,
     databaseURL: env.VITE_FIREBASE_DATABASE_URL,
@@ -29,10 +36,11 @@ export function resolveFirebaseConfig(env = {}, stored = null) {
     storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET,
     messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID,
     appId: env.VITE_FIREBASE_APP_ID,
-  };
+  });
   if (envConfig.apiKey && envConfig.databaseURL && envConfig.projectId) return envConfig;
 
-  if (stored?.apiKey && stored?.databaseURL && stored?.projectId) return stored;
+  const storedConfig = normalizeFirebaseConfig(stored);
+  if (storedConfig.apiKey && storedConfig.databaseURL && storedConfig.projectId) return storedConfig;
 
   return envConfig;
 }

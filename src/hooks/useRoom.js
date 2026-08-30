@@ -5,10 +5,42 @@ import { generatePin, roomPath, teamPath, timerPath } from "../lib/roomPaths";
 import { getRoundMeta } from "../lib/rounds";
 
 const ROUND_ORDER = [1, 2, 3];
+const ROOM_CONNECTION_TIMEOUT_MS = 10_000;
 
 function freshTimer(round) {
   const durationSeconds = getRoundMeta(round).durationSeconds;
   return { durationSeconds, remainingMs: durationSeconds * 1000, endsAt: null, running: false };
+}
+
+function waitForDatabaseConnection(db, timeoutMs = ROOM_CONNECTION_TIMEOUT_MS) {
+  return new Promise((resolve, reject) => {
+    const connectionRef = ref(db, ".info/connected");
+    let unsubscribe = null;
+    let settled = false;
+
+    const finish = (callback, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
+      unsubscribe?.();
+      callback(value);
+    };
+
+    const timeoutId = setTimeout(() => {
+      finish(
+        reject,
+        new Error("Firebase 연결에 응답이 없습니다. 인터넷 연결과 Firebase databaseURL 설정을 확인해 주세요."),
+      );
+    }, timeoutMs);
+
+    unsubscribe = onValue(
+      connectionRef,
+      (snapshot) => {
+        if (snapshot.val() === true) finish(resolve);
+      },
+      (error) => finish(reject, error),
+    );
+  });
 }
 
 /**
@@ -126,6 +158,7 @@ export function useRoom(pin) {
 
 export async function createRoom() {
   const db = getDb();
+  await waitForDatabaseConnection(db);
   const pin = generatePin();
   await set(ref(db, roomPath(pin)), {
     meta: {
