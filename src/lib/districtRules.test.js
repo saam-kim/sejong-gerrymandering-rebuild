@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   DISTRICT_POPULATION_LIMITS,
   calculateDistrictResults,
-  calculateSeats,
   checkContiguity,
   getEmptyAssignments,
   isAreaSetContiguous,

@@ -3,10 +3,12 @@
     "rooms": {
       "$pin": {
         ".read": true,
-        ".write": true,
+        ".write": false,
         ".validate": "$pin.matches(/^[0-9]{6}$/)",
 
         "meta": {
+          ".write": "!newData.exists() || newData.hasChildren(['createdAt', 'currentRound', 'status', 'timer'])",
+          ".validate": "newData.hasChildren(['createdAt', 'currentRound', 'status', 'timer'])",
           "createdAt": { ".validate": "newData.isNumber()" },
           "currentRound": { ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 3" },
           "status": { ".validate": "newData.isString() && newData.val().length <= 20" },
@@ -23,6 +25,7 @@
 
         "teams": {
           "$teamId": {
+            ".write": "root.child('rooms').child($pin).child('meta').exists()",
             "teamName": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 40" },
             "joinedAt": { ".validate": "newData.isNumber()" },
             "$other": { ".validate": false }
@@ -33,6 +36,7 @@
           "$round": {
             ".validate": "$round == '1' || $round == '2' || $round == '3'",
             "$teamId": {
+              ".write": "!newData.exists() || ((((root.child('rooms').child($pin).child('meta').child('currentRound').val() == 1) && $round == '1') || ((root.child('rooms').child($pin).child('meta').child('currentRound').val() == 2) && $round == '2') || ((root.child('rooms').child($pin).child('meta').child('currentRound').val() == 3) && $round == '3')) && root.child('rooms').child($pin).child('teams').child($teamId).exists() && !root.child('rooms').child($pin).child('submissions').child($round).child($teamId).exists())",
               "assignments": {
                 "$areaId": { ".validate": "newData.val() == null || (newData.isNumber() && newData.val() >= 1 && newData.val() <= 5)" }
               },
@@ -46,6 +50,7 @@
           "$round": {
             ".validate": "$round == '1' || $round == '2' || $round == '3'",
             "$teamId": {
+              ".write": "!newData.exists() || ((((root.child('rooms').child($pin).child('meta').child('currentRound').val() == 1) && $round == '1') || ((root.child('rooms').child($pin).child('meta').child('currentRound').val() == 2) && $round == '2') || ((root.child('rooms').child($pin).child('meta').child('currentRound').val() == 3) && $round == '3')) && root.child('rooms').child($pin).child('teams').child($teamId).exists() && !data.exists())",
               "assignments": {
                 "$areaId": { ".validate": "newData.val() == null || (newData.isNumber() && newData.val() >= 1 && newData.val() <= 5)" }
               },

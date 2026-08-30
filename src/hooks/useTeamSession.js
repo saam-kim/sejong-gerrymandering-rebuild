@@ -27,6 +27,10 @@ function writeSession(pin, session) {
   window.localStorage.setItem(storageKey(pin), JSON.stringify(session));
 }
 
+export function clearTeamSession(pin) {
+  window.localStorage.removeItem(storageKey(pin));
+}
+
 /**
  * 학생 모둠 세션. 새로고침해도 같은 모둠으로 자동 복귀하도록 localStorage에 teamId를 보관한다.
  */
@@ -43,7 +47,7 @@ export function useTeamSession(pin) {
   }, [pin]);
 
   const leave = useCallback(() => {
-    window.localStorage.removeItem(storageKey(pin));
+    clearTeamSession(pin);
     setSession(null);
   }, [pin]);
 

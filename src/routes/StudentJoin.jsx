@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { get, ref } from "firebase/database";
-import { getDb } from "../lib/firebase";
-import { roomPath } from "../lib/roomPaths";
-import { readTeamSession, useTeamSession } from "../hooks/useTeamSession";
+import { getDb, waitForDatabaseConnection } from "../lib/firebase";
+import { isValidPin, roomPath } from "../lib/roomPaths";
+import { clearTeamSession, readTeamSession, useTeamSession } from "../hooks/useTeamSession";
 import PinDigitRow from "../components/PinDigitRow";
 
 export default function StudentJoin() {
@@ -18,14 +18,15 @@ export default function StudentJoin() {
     setError("");
 
     const cleanPin = pin.trim();
-    if (!cleanPin) {
-      setError("선생님이 알려준 PIN을 입력해 주세요.");
+    if (!isValidPin(cleanPin)) {
+      setError("선생님이 알려준 숫자 PIN 6자리를 모두 입력해 주세요.");
       return;
     }
 
     setJoining(true);
     try {
       const db = getDb();
+      await waitForDatabaseConnection(db);
       const snapshot = await get(ref(db, roomPath(cleanPin)));
       if (!snapshot.exists()) {
         setError("해당 PIN의 방을 찾을 수 없습니다. PIN을 다시 확인해 주세요.");
@@ -36,15 +37,19 @@ export default function StudentJoin() {
       // 이 기기로 같은 PIN에 이미 참가한 적이 있다면(새로고침, 브라우저 재시작 등으로
       // 다시 참가 화면에 온 경우) 새 모둠을 또 만들지 않고 하던 모둠으로 바로 이어간다.
       const existing = readTeamSession(cleanPin);
-      if (existing?.teamId) {
+      if (existing?.teamId && snapshot.child(`teams/${existing.teamId}`).exists()) {
         navigate(`/play/${cleanPin}`);
         return;
       }
+
+      // 교사가 이전 모둠을 삭제한 기기라면 낡은 로컬 세션을 버리고 새 모둠으로 참가한다.
+      if (existing?.teamId) clearTeamSession(cleanPin);
 
       await session.join();
       navigate(`/play/${cleanPin}`);
     } catch (err) {
       setError(err.message || "참가하지 못했습니다. 다시 시도해 주세요.");
+    } finally {
       setJoining(false);
     }
   }

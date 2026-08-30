@@ -1,17 +1,31 @@
 import { initializeApp, getApps } from "firebase/app";
-import { enableLogging, forceWebSockets, getDatabase } from "firebase/database";
+import { enableLogging, forceLongPolling, forceWebSockets, getDatabase, onValue, ref } from "firebase/database";
 
 // 배포 환경 변수는 서비스가 지정한 전용 Firebase 연결이므로 로컬스토리지보다 우선한다.
 // 환경 변수가 없는 로컬 개발에서는 교사가 브라우저에 붙여넣은 설정을 대체값으로 쓴다.
 const FIREBASE_CONFIG_STORAGE_KEY = "gerrymanderingFirebaseConfig";
 
-if (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("firebaseDebug")) {
-  enableLogging(true);
-}
+if (typeof window !== "undefined") {
+  const searchParams = new URLSearchParams(window.location.search);
+  if (searchParams.has("firebaseDebug")) enableLogging(true);
 
-// 잘못된 배포 설정으로 연결이 실패했던 브라우저는 장기 폴링만 고집하는 실패 이력을
-// 저장한다. 정상 설정이 배포된 뒤에도 그 상태가 남아 있으므로 검증된 WebSocket을 사용한다.
-if (typeof window !== "undefined") forceWebSockets();
+  // 평소에는 Firebase가 WebSocket을 우선 사용하고, 학교망에서 WebSocket이 막힐 때는
+  // 장기 폴링으로 자동 복구하도록 둔다. 예전의 잘못된 설정 때문에 남은 실패 표시는
+  // 지워서 정상 WebSocket을 다시 먼저 시도하게 한다. 아래 진단 파라미터는 두 전송 방식을
+  // 각각 실제 브라우저에서 검증할 때만 사용한다.
+  const forcedTransport = searchParams.get("firebaseTransport");
+  if (forcedTransport === "longpoll") {
+    forceLongPolling();
+  } else if (forcedTransport === "websocket") {
+    forceWebSockets();
+  } else {
+    try {
+      window.localStorage.removeItem("firebase:previous_websocket_failure");
+    } catch {
+      // 저장소 접근이 차단된 브라우저에서도 Firebase 기본 전송 선택은 그대로 동작한다.
+    }
+  }
+}
 
 function normalizeFirebaseConfig(config) {
   if (!config || typeof config !== "object") return {};
@@ -77,4 +91,37 @@ export function getDb() {
 export function resetDbInstance() {
   // Firebase 설정이 바뀐 뒤(붙여넣기 직후) 새 설정으로 다시 초기화하기 위해 사용.
   dbInstance = null;
+}
+
+export const DATABASE_CONNECTION_TIMEOUT_MS = 10_000;
+
+export function waitForDatabaseConnection(db = getDb(), timeoutMs = DATABASE_CONNECTION_TIMEOUT_MS) {
+  return new Promise((resolve, reject) => {
+    const connectionRef = ref(db, ".info/connected");
+    let unsubscribe = null;
+    let settled = false;
+
+    const finish = (callback, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
+      unsubscribe?.();
+      callback(value);
+    };
+
+    const timeoutId = setTimeout(() => {
+      finish(
+        reject,
+        new Error("실시간 서버에 연결하지 못했습니다. 인터넷 연결을 확인한 뒤 다시 시도해 주세요."),
+      );
+    }, timeoutMs);
+
+    unsubscribe = onValue(
+      connectionRef,
+      (snapshot) => {
+        if (snapshot.val() === true) finish(resolve);
+      },
+      (error) => finish(reject, error),
+    );
+  });
 }

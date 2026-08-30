@@ -2,15 +2,24 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useRoom } from "../hooks/useRoom";
 import { getRoundMeta } from "../lib/rounds";
 import CompareGrid from "../components/teacher/CompareGrid";
+import ConnectionBanner from "../components/ConnectionBanner";
 
 export default function TeacherCompareFullscreen() {
   const { pin } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { meta, teams, drafts, submissions, loading, exists } = useRoom(pin);
+  const { meta, teams, drafts, submissions, loading, error, connected, exists } = useRoom(pin);
 
-  if (loading || !exists) {
+  if (loading) {
     return <div className="flex min-h-screen items-center justify-center bg-gray-900 text-gray-300">불러오는 중...</div>;
+  }
+
+  if (error && !exists) {
+    return <div className="flex min-h-screen items-center justify-center bg-gray-900 text-gray-300">실시간 서버에 연결하지 못했습니다.</div>;
+  }
+
+  if (!exists) {
+    return <div className="flex min-h-screen items-center justify-center bg-gray-900 text-gray-300">존재하지 않는 방입니다.</div>;
   }
 
   const currentRound = meta?.currentRound || 1;
@@ -20,6 +29,7 @@ export default function TeacherCompareFullscreen() {
 
   return (
     <div className="flex h-screen flex-col bg-gray-900">
+      <ConnectionBanner connected={connected} error={error} />
       <header className="flex items-center justify-between px-6 py-4">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.14em] text-indigo-300">Comparison View</p>

@@ -21,6 +21,7 @@ import CountdownDisplay from "../components/CountdownDisplay";
 import IntroModal from "../components/panels/IntroModal";
 import RulesModal from "../components/panels/RulesModal";
 import ArmedButton from "../components/ArmedButton";
+import ConnectionBanner from "../components/ConnectionBanner";
 
 /**
  * 교사가 실제 모둠을 만들지 않고도 "학생 화면이 지금 어떻게 보이는지" 리허설해볼 수 있는
@@ -30,7 +31,7 @@ import ArmedButton from "../components/ArmedButton";
  */
 export default function StudentPreview() {
   const { pin } = useParams();
-  const { meta, timer, loading, exists } = useRoom(pin);
+  const { meta, timer, loading, error, connected, exists } = useRoom(pin);
   const [onboardingStep, setOnboardingStep] = useState("why");
 
   const currentRound = meta?.currentRound || 1;
@@ -75,6 +76,10 @@ export default function StudentPreview() {
     return <CenteredMessage>불러오는 중...</CenteredMessage>;
   }
 
+  if (error && !exists) {
+    return <CenteredMessage>실시간 서버에 연결하지 못했습니다. 인터넷 연결을 확인하고 새로고침해 주세요.</CenteredMessage>;
+  }
+
   if (!exists) {
     return <CenteredMessage>방을 찾을 수 없습니다. PIN을 다시 확인해 주세요.</CenteredMessage>;
   }
@@ -109,6 +114,7 @@ export default function StudentPreview() {
 
   return (
     <div className="flex h-screen flex-col bg-gray-50">
+      <ConnectionBanner connected={connected} error={error} />
       <div className="flex items-center justify-between gap-3 bg-indigo-950 px-4 py-1.5 text-xs font-black text-indigo-100">
         <span>👀 미리보기 모드 — 여기서 하는 배정·제출은 실제 학생 화면에 전혀 반영되지 않습니다.</span>
         <Link to={`/teacher/${pin}`} className="rounded-md bg-white/10 px-2.5 py-1 hover:bg-white/20">

@@ -1,46 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
-import { onValue, ref, remove, serverTimestamp, set, update } from "firebase/database";
-import { getDb } from "../lib/firebase";
-import { generatePin, roomPath, teamPath, timerPath } from "../lib/roomPaths";
+import { onValue, ref, runTransaction, serverTimestamp, update } from "firebase/database";
+import { getDb, waitForDatabaseConnection } from "../lib/firebase";
+import { buildTeamRemovalUpdates, claimAvailablePin, roomMetaPath, roomPath, timerPath } from "../lib/roomPaths";
 import { getRoundMeta } from "../lib/rounds";
 
 const ROUND_ORDER = [1, 2, 3];
-const ROOM_CONNECTION_TIMEOUT_MS = 10_000;
+const ROOM_LOAD_TIMEOUT_MS = 12_000;
 
 function freshTimer(round) {
   const durationSeconds = getRoundMeta(round).durationSeconds;
   return { durationSeconds, remainingMs: durationSeconds * 1000, endsAt: null, running: false };
-}
-
-function waitForDatabaseConnection(db, timeoutMs = ROOM_CONNECTION_TIMEOUT_MS) {
-  return new Promise((resolve, reject) => {
-    const connectionRef = ref(db, ".info/connected");
-    let unsubscribe = null;
-    let settled = false;
-
-    const finish = (callback, value) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timeoutId);
-      unsubscribe?.();
-      callback(value);
-    };
-
-    const timeoutId = setTimeout(() => {
-      finish(
-        reject,
-        new Error("Firebase 연결에 응답이 없습니다. 인터넷 연결과 Firebase databaseURL 설정을 확인해 주세요."),
-      );
-    }, timeoutMs);
-
-    unsubscribe = onValue(
-      connectionRef,
-      (snapshot) => {
-        if (snapshot.val() === true) finish(resolve);
-      },
-      (error) => finish(reject, error),
-    );
-  });
 }
 
 /**
@@ -51,12 +20,19 @@ export function useRoom(pin) {
   const [room, setRoom] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [connected, setConnected] = useState(null);
 
   useEffect(() => {
     if (!pin) {
+      setRoom(null);
       setLoading(false);
       return undefined;
     }
+
+    setRoom(null);
+    setLoading(true);
+    setError(null);
+    setConnected(null);
 
     let db;
     try {
@@ -67,13 +43,45 @@ export function useRoom(pin) {
       return undefined;
     }
 
-    const roomRef = ref(db, roomPath(pin));
-    const unsubscribe = onValue(
-      roomRef,
-      (snapshot) => {
-        setRoom(snapshot.val());
+    let connectionState = null;
+    let latestRoom = null;
+    let hasRoomSnapshot = false;
+
+    const finishLoadIfReady = () => {
+      if (!hasRoomSnapshot) return;
+      if (latestRoom !== null || connectionState === true) {
+        clearTimeout(loadTimeout);
+        setRoom(latestRoom);
         setLoading(false);
         setError(null);
+      }
+    };
+
+    const loadTimeout = setTimeout(() => {
+      setError(new Error("실시간 서버의 방 정보를 불러오지 못했습니다. 네트워크를 확인하고 새로고침해 주세요."));
+      setLoading(false);
+    }, ROOM_LOAD_TIMEOUT_MS);
+
+    const unsubscribeConnection = onValue(
+      ref(db, ".info/connected"),
+      (snapshot) => {
+        connectionState = snapshot.val() === true;
+        setConnected(connectionState);
+        finishLoadIfReady();
+      },
+      (err) => {
+        setConnected(false);
+        setError(err);
+      },
+    );
+
+    const unsubscribeRoom = onValue(
+      ref(db, roomPath(pin)),
+      (snapshot) => {
+        hasRoomSnapshot = true;
+        latestRoom = snapshot.val();
+        if (latestRoom !== null) setRoom(latestRoom);
+        finishLoadIfReady();
       },
       (err) => {
         setError(err);
@@ -81,7 +89,11 @@ export function useRoom(pin) {
       },
     );
 
-    return () => unsubscribe();
+    return () => {
+      clearTimeout(loadTimeout);
+      unsubscribeConnection();
+      unsubscribeRoom();
+    };
   }, [pin]);
 
   const advanceRound = useCallback(
@@ -104,8 +116,7 @@ export function useRoom(pin) {
       const remainingMs = timer.remainingMs ?? timer.durationSeconds * 1000;
       await update(ref(db, timerPath(pin)), { running: true, endsAt: Date.now() + remainingMs, remainingMs: null });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pin, timer?.running, timer?.endsAt, timer?.remainingMs, timer?.durationSeconds]);
+  }, [pin, timer]);
 
   const addTime = useCallback(
     async (deltaSeconds) => {
@@ -119,9 +130,8 @@ export function useRoom(pin) {
         const nextRemaining = Math.max(0, (timer.remainingMs ?? 0) + deltaMs);
         await update(ref(db, timerPath(pin)), { remainingMs: nextRemaining });
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     },
-    [pin, timer?.running, timer?.endsAt, timer?.remainingMs],
+    [pin, timer],
   );
 
   const resetTimer = useCallback(async () => {
@@ -133,7 +143,7 @@ export function useRoom(pin) {
   const removeTeam = useCallback(
     async (teamId) => {
       const db = getDb();
-      await remove(ref(db, teamPath(pin, teamId)));
+      await update(ref(db, roomPath(pin)), buildTeamRemovalUpdates(teamId));
     },
     [pin],
   );
@@ -147,6 +157,7 @@ export function useRoom(pin) {
     timer,
     loading,
     error,
+    connected,
     exists: room !== null,
     advanceRound,
     toggleTimer,
@@ -159,16 +170,23 @@ export function useRoom(pin) {
 export async function createRoom() {
   const db = getDb();
   await waitForDatabaseConnection(db);
-  const pin = generatePin();
-  await set(ref(db, roomPath(pin)), {
-    meta: {
-      createdAt: serverTimestamp(),
-      currentRound: 1,
-      status: "open",
-      timer: freshTimer(1),
-    },
+  return claimAvailablePin(async (pin) => {
+    const result = await runTransaction(
+      ref(db, roomMetaPath(pin)),
+      (current) => {
+        if (current !== null) return undefined;
+        return {
+          createdAt: serverTimestamp(),
+          currentRound: 1,
+          status: "open",
+          teamCounter: 0,
+          timer: freshTimer(1),
+        };
+      },
+      { applyLocally: false },
+    );
+    return result.committed;
   });
-  return pin;
 }
 
 export function getNextRound(currentRound) {

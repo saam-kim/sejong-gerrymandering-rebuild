@@ -12,16 +12,20 @@ function computeRemainingMs(timer) {
  */
 export function useCountdown(timer) {
   const [remainingMs, setRemainingMs] = useState(() => computeRemainingMs(timer));
+  const running = timer?.running;
+  const endsAt = timer?.endsAt;
+  const pausedRemainingMs = timer?.remainingMs;
 
   useEffect(() => {
-    setRemainingMs(computeRemainingMs(timer));
-    if (!timer?.running) return undefined;
+    const currentTimer = { running, endsAt, remainingMs: pausedRemainingMs };
+    setRemainingMs(computeRemainingMs(currentTimer));
+    if (!running) return undefined;
 
     const interval = setInterval(() => {
-      setRemainingMs(computeRemainingMs(timer));
+      setRemainingMs(computeRemainingMs(currentTimer));
     }, 250);
     return () => clearInterval(interval);
-  }, [timer?.running, timer?.endsAt, timer?.remainingMs]);
+  }, [running, endsAt, pausedRemainingMs]);
 
   const totalMs = (timer?.durationSeconds || 0) * 1000;
   const fraction = totalMs > 0 ? remainingMs / totalMs : 0;

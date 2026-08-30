@@ -24,6 +24,7 @@ import CountdownDisplay from "../components/CountdownDisplay";
 import IntroModal from "../components/panels/IntroModal";
 import RulesModal from "../components/panels/RulesModal";
 import ArmedButton from "../components/ArmedButton";
+import ConnectionBanner from "../components/ConnectionBanner";
 
 function introSeenKey(pin, teamId) {
   return `gerrymandering_intro_seen:${pin}:${teamId}`;
@@ -32,7 +33,7 @@ function introSeenKey(pin, teamId) {
 export default function StudentPlay() {
   const { pin } = useParams();
   const session = useTeamSession(pin);
-  const { meta, drafts, submissions, timer, loading, exists } = useRoom(pin);
+  const { meta, teams, drafts, submissions, timer, loading, error, connected, exists } = useRoom(pin);
   // 학생이 처음 입장했을 때만 순서대로 보여주는 온보딩: "왜 하는지" → "규칙" → 시작
   const [onboardingStep, setOnboardingStep] = useState(() =>
     session.teamId && !window.localStorage.getItem(introSeenKey(pin, session.teamId)) ? "why" : null,
@@ -51,6 +52,7 @@ export default function StudentPlay() {
   const [activeDistrictId, setActiveDistrictId] = useState(DISTRICTS[0]);
   const [validationResult, setValidationResult] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [toast, setToast] = useState(null);
   const toastTimerRef = useRef(null);
   const hasHydratedRoundRef = useRef(false);
@@ -95,8 +97,17 @@ export default function StudentPlay() {
     return <CenteredMessage>불러오는 중...</CenteredMessage>;
   }
 
+  if (error && !exists) {
+    return <CenteredMessage>실시간 서버에 연결하지 못했습니다. 인터넷 연결을 확인하고 새로고침해 주세요.</CenteredMessage>;
+  }
+
   if (!exists) {
     return <CenteredMessage>방을 찾을 수 없습니다. PIN을 다시 확인해 주세요.</CenteredMessage>;
+  }
+
+  // 교사가 이 모둠을 삭제했거나 오래된 로컬 세션이면 참가 화면에서 새 모둠으로 복구한다.
+  if (!teams[session.teamId]) {
+    return <Navigate to="/join" replace />;
   }
 
   function handleAreaTap(areaId) {
@@ -127,6 +138,7 @@ export default function StudentPlay() {
   }
 
   function handleSubmitAttempt() {
+    setSubmitError("");
     const result = validatePlan(assignments, { round: currentRound });
     setValidationResult(result);
   }
@@ -136,6 +148,8 @@ export default function StudentPlay() {
     try {
       await submitPlan(pin, currentRound, session.teamId, assignments);
       setValidationResult(null);
+    } catch (err) {
+      setSubmitError(err.message || "제출하지 못했습니다. 연결을 확인한 뒤 다시 시도해 주세요.");
     } finally {
       setSubmitting(false);
     }
@@ -143,6 +157,7 @@ export default function StudentPlay() {
 
   return (
     <div className="flex h-screen flex-col bg-gray-50">
+      <ConnectionBanner connected={connected} error={error} />
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-2.5 shadow-sm">
         <div className="min-w-0">
           <p className="text-[10px] font-black uppercase tracking-[0.14em] text-indigo-600">지도를 훔친 자들</p>
@@ -226,6 +241,8 @@ export default function StudentPlay() {
           round={currentRound}
           onClose={() => setValidationResult(null)}
           onConfirmSubmit={handleConfirmSubmit}
+          submitting={submitting}
+          submitError={submitError}
         />
       )}
 

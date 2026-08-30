@@ -1,5 +1,16 @@
 ﻿import { initializeApp } from "firebase/app";
-import { getDatabase, ref, set, get, update, remove, onValue, off } from "firebase/database";
+import {
+  connectDatabaseEmulator,
+  getDatabase,
+  ref,
+  set,
+  get,
+  update,
+  remove,
+  onValue,
+  runTransaction,
+  serverTimestamp,
+} from "firebase/database";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAqm49veIZMeaZdmwkX0R779s1u8YApISM",
@@ -14,8 +25,79 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig, "sim-" + Date.now());
 const db = getDatabase(app);
 
+if (process.env.FIREBASE_DATABASE_EMULATOR_HOST) {
+  const [host, port] = process.env.FIREBASE_DATABASE_EMULATOR_HOST.split(":");
+  connectDatabaseEmulator(db, host, Number(port));
+}
+
 function wait(ms) {
   return new Promise(res => setTimeout(res, ms));
+}
+
+async function expectPermissionDenied(label, action) {
+  try {
+    await action();
+  } catch (error) {
+    if (error?.code === "PERMISSION_DENIED" || error?.code === "permission-denied") {
+      console.log(`  ✓ 보안 규칙 차단 확인: ${label}`);
+      return;
+    }
+    throw error;
+  }
+  throw new Error(`보안 규칙이 차단해야 하는 요청을 허용했습니다: ${label}`);
+}
+
+const activeTestPins = new Set();
+
+async function cleanupRoom(pin) {
+  const snapshot = await get(ref(db, `rooms/${pin}`));
+  const room = snapshot.val() || {};
+  const teamIds = new Set(Object.keys(room.teams || {}));
+  for (const rounds of [room.drafts || {}, room.submissions || {}]) {
+    for (const roundData of Object.values(rounds)) {
+      for (const teamId of Object.keys(roundData || {})) teamIds.add(teamId);
+    }
+  }
+
+  for (const teamId of teamIds) {
+    for (const round of [1, 2, 3]) {
+      await remove(ref(db, `rooms/${pin}/drafts/${round}/${teamId}`));
+      await remove(ref(db, `rooms/${pin}/submissions/${round}/${teamId}`));
+    }
+    await remove(ref(db, `rooms/${pin}/teams/${teamId}`));
+  }
+  await remove(ref(db, `rooms/${pin}/meta`));
+  activeTestPins.delete(pin);
+}
+
+async function createTestRoom(durationSeconds) {
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const pin = String(Math.floor(100000 + Math.random() * 900000));
+    const result = await runTransaction(
+      ref(db, `rooms/${pin}/meta`),
+      (current) =>
+        current === null
+          ? {
+              createdAt: serverTimestamp(),
+              currentRound: 1,
+              status: "open",
+              teamCounter: 0,
+              timer: {
+                durationSeconds,
+                endsAt: null,
+                remainingMs: durationSeconds * 1000,
+                running: false,
+              },
+            }
+          : undefined,
+      { applyLocally: false },
+    );
+    if (result.committed) {
+      activeTestPins.add(pin);
+      return pin;
+    }
+  }
+  throw new Error("테스트 방 PIN을 확보하지 못했습니다.");
 }
 
 async function runSimulation1() {
@@ -23,23 +105,10 @@ async function runSimulation1() {
   console.log("▶ [시뮬레이션 1] 기본 수업 플로우 (교사 방 생성 → 2개 모둠 참가 → 1라운드 획정 제출 → 라운드 진행)");
   console.log("==========================================");
 
-  const pin = "881122"; // 6자리 PIN
-  const roomRef = ref(db, `rooms/${pin}`);
+  const pin = await createTestRoom(300);
 
   // 1. 교사: 방 생성
   console.log("[1. 교사] 방 생성 중... (PIN: " + pin + ")");
-  await set(ref(db, `rooms/${pin}/meta`), {
-    createdAt: Date.now(),
-    currentRound: 1,
-    status: "waiting",
-    teamCounter: 0,
-    timer: {
-      durationSeconds: 300,
-      endsAt: null,
-      remainingMs: 300000,
-      running: false
-    }
-  });
   console.log("  ✓ 교사 방 생성 완료!");
 
   // 2. 모둠 1 참가
@@ -89,6 +158,12 @@ async function runSimulation1() {
     submittedAt: Date.now()
   });
   console.log("  ✓ 1모둠 1라운드 제출 완료!");
+  await expectPermissionDenied("제출 완료 데이터 덮어쓰기", () =>
+    set(ref(db, `rooms/${pin}/submissions/1/team1`), {
+      assignments: sampleAssignments1,
+      submittedAt: Date.now(),
+    }),
+  );
 
   // 6. 모둠 2 최종 제출
   console.log("[6. 학생] 2모둠 선거구 배정 제출...");
@@ -116,9 +191,29 @@ async function runSimulation1() {
   await update(ref(db, `rooms/${pin}/meta`), {
     currentRound: 2
   });
+  await expectPermissionDenied("종료된 라운드 초안 저장", () =>
+    set(ref(db, `rooms/${pin}/drafts/1/team1`), {
+      assignments: sampleAssignments1,
+      updatedAt: Date.now(),
+    }),
+  );
+
+  // 앱의 모둠 삭제와 같은 다중 경로 갱신이 팀·초안·제출을 한 번에 정리하는지 확인한다.
+  await update(ref(db, `rooms/${pin}`), {
+    "teams/team2": null,
+    "drafts/1/team2": null,
+    "submissions/1/team2": null,
+    "drafts/2/team2": null,
+    "submissions/2/team2": null,
+    "drafts/3/team2": null,
+    "submissions/3/team2": null,
+  });
+  const removedTeamSnapshot = await get(ref(db, `rooms/${pin}/teams/team2`));
+  if (removedTeamSnapshot.exists()) throw new Error("모둠 다중 경로 정리에 실패했습니다.");
+  console.log("  ✓ 모둠 및 라운드 데이터 일괄 삭제 확인");
 
   // 데이터 정리
-  await remove(roomRef);
+  await cleanupRoom(pin);
   console.log("  ✓ 시뮬레이션 1 데이터 정리(방 삭제) 완료!");
 }
 
@@ -127,23 +222,11 @@ async function runSimulation2() {
   console.log("▶ [시뮬레이션 2] 다수 모둠 실시간 동기화 & 라운드 연속 진행 & 재접속/데이터 일관성 테스트");
   console.log("==========================================");
 
-  const pin = "992233";
+  const pin = await createTestRoom(180);
   const roomRef = ref(db, `rooms/${pin}`);
 
   // 1. 방 생성
   console.log("[1. 교사] 방 생성 (PIN: " + pin + ")");
-  await set(ref(db, `rooms/${pin}/meta`), {
-    createdAt: Date.now(),
-    currentRound: 1,
-    status: "waiting",
-    teamCounter: 0,
-    timer: {
-      durationSeconds: 180,
-      endsAt: null,
-      remainingMs: 180000,
-      running: false
-    }
-  });
 
   // 2. 4개 모둠 동시 참가
   console.log("[2. 학생] 4개 모둠(1~4모둠) 순차/동시 입장...");
@@ -178,7 +261,7 @@ async function runSimulation2() {
   }
 
   await wait(500);
-  off(ref(db, `rooms/${pin}/submissions/1`));
+  unsubscribe();
 
   // 5. 3라운드까지 연속 진행
   console.log("[5. 진행] 2라운드 및 3라운드 진행...");
@@ -191,21 +274,31 @@ async function runSimulation2() {
   console.log("[6. 검증] 최종 방 데이터 구조 정상 확인: Round " + finalData.meta.currentRound);
 
   // 방 삭제
-  await remove(roomRef);
+  await cleanupRoom(pin);
   console.log("  ✓ 시뮬레이션 2 데이터 정리 완료!");
 }
 
 async function main() {
+  let exitCode = 0;
   try {
     await runSimulation1();
     await runSimulation2();
     console.log("\n==========================================");
     console.log("🎉 시뮬레이션 2회 모두 성공적으로 완료되었습니다!");
     console.log("==========================================");
-    process.exit(0);
   } catch (err) {
     console.error("❌ 시뮬레이션 실패:", err);
-    process.exit(1);
+    exitCode = 1;
+  } finally {
+    for (const pin of [...activeTestPins]) {
+      try {
+        await cleanupRoom(pin);
+      } catch (cleanupError) {
+        console.error(`❌ 테스트 방 ${pin} 정리 실패:`, cleanupError);
+        exitCode = 1;
+      }
+    }
+    process.exit(exitCode);
   }
 }
 

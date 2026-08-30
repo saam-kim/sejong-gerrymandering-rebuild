@@ -8,7 +8,7 @@ function successSubtitle(round, result) {
   return "이 선거구 획정안을 최종 제출할까요? 제출 후에는 이번 라운드에서 수정할 수 없습니다.";
 }
 
-export default function SubmitFeedback({ result, round = 1, onClose, onConfirmSubmit }) {
+export default function SubmitFeedback({ result, round = 1, onClose, onConfirmSubmit, submitting = false, submitError = "" }) {
   if (!result) return null;
 
   const isSuccess = result.missionSuccess;
@@ -50,12 +50,14 @@ export default function SubmitFeedback({ result, round = 1, onClose, onConfirmSu
             <button
               type="button"
               onClick={onConfirmSubmit}
-              className="flex-1 rounded-xl bg-gray-900 px-4 py-3 font-black text-white hover:bg-gray-700"
+              disabled={submitting}
+              className="flex-1 rounded-xl bg-gray-900 px-4 py-3 font-black text-white hover:bg-gray-700 disabled:cursor-wait disabled:opacity-50"
             >
-              최종 제출
+              {submitting ? "제출하는 중..." : "최종 제출"}
             </button>
           )}
         </div>
+        {submitError && <p className="mt-3 text-center text-sm font-black text-red-600">{submitError}</p>}
       </div>
     </div>
   );

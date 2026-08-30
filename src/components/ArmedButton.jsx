@@ -7,13 +7,14 @@ const ARM_TIMEOUT_MS = 3500;
  * 첫 클릭은 "정말 진행할까요?" 상태로 무장(arm)만 하고, 지정 시간 안에 다시 누르면 실행한다.
  * 브라우저 기본 confirm() 대화상자보다 화면 흐름을 끊지 않는다.
  */
-export default function ArmedButton({ label, armedLabel, onConfirm, className = "", armedClassName = "" }) {
+export default function ArmedButton({ label, armedLabel, onConfirm, className = "", armedClassName = "", disabled = false }) {
   const [armed, setArmed] = useState(false);
   const timerRef = useRef(null);
 
   useEffect(() => () => clearTimeout(timerRef.current), []);
 
   function handleClick() {
+    if (disabled) return;
     if (!armed) {
       setArmed(true);
       timerRef.current = setTimeout(() => setArmed(false), ARM_TIMEOUT_MS);
@@ -25,7 +26,12 @@ export default function ArmedButton({ label, armedLabel, onConfirm, className = 
   }
 
   return (
-    <button type="button" onClick={handleClick} className={armed ? armedClassName || className : className}>
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={disabled}
+      className={armed ? armedClassName || className : className}
+    >
       {armed ? armedLabel : label}
     </button>
   );

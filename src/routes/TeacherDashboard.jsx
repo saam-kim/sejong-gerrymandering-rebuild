@@ -6,6 +6,7 @@ import TeamStatusList from "../components/teacher/TeamStatusList";
 import CompareGrid from "../components/teacher/CompareGrid";
 import TimerControls from "../components/teacher/TimerControls";
 import ArmedButton from "../components/ArmedButton";
+import ConnectionBanner from "../components/ConnectionBanner";
 
 export default function TeacherDashboard() {
   const { pin } = useParams();
@@ -17,6 +18,8 @@ export default function TeacherDashboard() {
     submissions,
     timer,
     loading,
+    error,
+    connected,
     exists,
     advanceRound,
     toggleTimer,
@@ -26,6 +29,8 @@ export default function TeacherDashboard() {
   } = useRoom(pin);
   const [selectedTeamIds, setSelectedTeamIds] = useState([]);
   const [isTeamListOpen, setIsTeamListOpen] = useState(false);
+  const [actionBusy, setActionBusy] = useState(false);
+  const [actionError, setActionError] = useState("");
   const currentRound = meta?.currentRound || 1;
   const [viewRound, setViewRound] = useState(currentRound);
 
@@ -39,11 +44,14 @@ export default function TeacherDashboard() {
     return <CenteredMessage>불러오는 중...</CenteredMessage>;
   }
 
+  if (error && !exists) {
+    return <CenteredMessage>실시간 서버에 연결하지 못했습니다. 인터넷 연결을 확인하고 새로고침해 주세요.</CenteredMessage>;
+  }
+
   if (!exists) {
     return <CenteredMessage>존재하지 않는 방입니다.</CenteredMessage>;
   }
 
-  const roundMeta = getRoundMeta(currentRound);
   const nextRound = getNextRound(currentRound);
   const teamCount = Object.keys(teams || {}).length;
   const submittedCount = Object.keys(submissions?.[currentRound] || {}).length;
@@ -63,6 +71,23 @@ export default function TeacherDashboard() {
     setSelectedTeamIds([]);
   }
 
+  async function runAction(action) {
+    if (actionBusy) return;
+    if (connected !== true) {
+      setActionError("실시간 서버가 연결된 뒤 다시 시도해 주세요.");
+      return;
+    }
+    setActionBusy(true);
+    setActionError("");
+    try {
+      await action();
+    } catch (err) {
+      setActionError(err.message || "요청을 반영하지 못했습니다. 연결을 확인하고 다시 시도해 주세요.");
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
   const teamListPanel = (
     <TeamStatusList
       teams={teams}
@@ -71,12 +96,16 @@ export default function TeacherDashboard() {
       round={viewRound}
       selectedTeamIds={selectedTeamIds}
       onToggleSelect={toggleSelect}
-      onRemoveTeam={removeTeam}
+      onRemoveTeam={(teamId) => runAction(() => removeTeam(teamId))}
     />
   );
 
   return (
     <div className="flex h-screen flex-col bg-gray-100">
+      <ConnectionBanner connected={connected} error={error} />
+      {actionError && (
+        <div className="bg-amber-100 px-4 py-2 text-center text-xs font-black text-amber-900">{actionError}</div>
+      )}
       <header className="flex flex-wrap items-center justify-between gap-3 bg-gray-950 px-4 py-3 text-white">
         <div className="flex items-center gap-5">
           <div>
@@ -102,7 +131,13 @@ export default function TeacherDashboard() {
         </div>
 
         <div className="flex items-center gap-4">
-          <TimerControls timer={timer} onToggle={toggleTimer} onAddTime={addTime} onReset={resetTimer} />
+          <TimerControls
+            timer={timer}
+            onToggle={() => runAction(toggleTimer)}
+            onAddTime={(seconds) => runAction(() => addTime(seconds))}
+            onReset={() => runAction(resetTimer)}
+            disabled={actionBusy || connected !== true}
+          />
 
           <div className="hidden flex-col items-center border-l border-white/10 px-4 sm:flex">
             <span className="text-xl font-black leading-none">{teamCount}</span>
@@ -126,7 +161,7 @@ export default function TeacherDashboard() {
             모둠 목록
           </button>
           <a
-            href={`#/teacher/${pin}/preview`}
+            href={`/teacher/${pin}/preview`}
             target="_blank"
             rel="noreferrer"
             className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-black hover:bg-white/20"
@@ -145,7 +180,8 @@ export default function TeacherDashboard() {
             <ArmedButton
               label={`${getRoundMeta(nextRound).name.split(" · ")[0]}로 넘어가기`}
               armedLabel="정말 넘어갈까요? (모두 초기화됨)"
-              onConfirm={() => advanceRound(nextRound)}
+              onConfirm={() => runAction(() => advanceRound(nextRound))}
+              disabled={actionBusy || connected !== true}
               className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-black text-white hover:bg-indigo-500"
               armedClassName="rounded-lg bg-amber-500 px-4 py-2 text-sm font-black text-white"
             />

@@ -1,5 +1,5 @@
 import { ref, remove, runTransaction, serverTimestamp, set, update } from "firebase/database";
-import { getDb } from "./firebase";
+import { getDb, waitForDatabaseConnection } from "./firebase";
 import { draftPath, submissionPath, teamCounterPath, teamPath } from "./roomPaths";
 
 /**
@@ -9,7 +9,13 @@ import { draftPath, submissionPath, teamCounterPath, teamPath } from "./roomPath
  */
 export async function joinTeam(pin, teamId) {
   const db = getDb();
-  const result = await runTransaction(ref(db, teamCounterPath(pin)), (current) => (current || 0) + 1);
+  await waitForDatabaseConnection(db);
+  const result = await runTransaction(
+    ref(db, teamCounterPath(pin)),
+    (current) => (typeof current === "number" ? current + 1 : 1),
+    { applyLocally: false },
+  );
+  if (!result.committed) throw new Error("방 참가가 취소되었습니다. PIN을 다시 확인해 주세요.");
   const teamName = `${result.snapshot.val()}모둠`;
   await set(ref(db, teamPath(pin, teamId)), {
     teamName,
@@ -28,6 +34,7 @@ export async function saveDraft(pin, round, teamId, assignments) {
 
 export async function submitPlan(pin, round, teamId, assignments) {
   const db = getDb();
+  await waitForDatabaseConnection(db);
   await set(ref(db, submissionPath(pin, round, teamId)), {
     assignments,
     submittedAt: serverTimestamp(),
