@@ -1,9 +1,13 @@
 import { initializeApp, getApps } from "firebase/app";
-import { getDatabase } from "firebase/database";
+import { enableLogging, getDatabase } from "firebase/database";
 
 // 배포 환경 변수는 서비스가 지정한 전용 Firebase 연결이므로 로컬스토리지보다 우선한다.
 // 환경 변수가 없는 로컬 개발에서는 교사가 브라우저에 붙여넣은 설정을 대체값으로 쓴다.
 const FIREBASE_CONFIG_STORAGE_KEY = "gerrymanderingFirebaseConfig";
+
+if (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("firebaseDebug")) {
+  enableLogging(true);
+}
 
 function normalizeFirebaseConfig(config) {
   if (!config || typeof config !== "object") return {};
